@@ -1,0 +1,41 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  // Updated provider for PostgreSQL
+  provider = "postgresql" 
+  url      = env("DATABASE_URL")
+}
+
+// User model for authentication
+model User {
+  // Using CUID for unique IDs, which is standard for PostgreSQL
+  id        String   @id @default(cuid()) 
+  email     String   @unique
+  name      String
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relation: A user can have many trades
+  trades    Trade[]
+}
+
+// Trade model for storing trading history
+model Trade {
+  id          String   @id @default(cuid())
+  symbol      String
+  entryPrice  Float
+  exitPrice   Float?   // Optional, as it might not exist for an open trade
+  pnl         Float?   // Profit/Loss, also optional
+  status      String   // e.g., "open", "closed"
+  entryTime   DateTime @default(now())
+  exitTime    DateTime?
+
+  // Relation: Each trade belongs to one user
+  user        User     @relation(fields: [userId], references: [id])
+  userId      String
+}

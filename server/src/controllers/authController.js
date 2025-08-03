@@ -1,49 +1,82 @@
-// In a real application, you would query a proper database (like PostgreSQL, MongoDB, etc.)
-// to find the user and check their password.
-const users = [
-    {
-        email: 'zen@ilstu.edu',
-        password: 'password123', // In a real app, passwords should be hashed!
-        name: 'Zen'
+// controllers/authController.js
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
+
+// Helper function to generate a token (this remains the same)
+const generateToken = (id) => {
+    return jwt.sign({ id }, process.env.JWT_SECRET, {
+        expiresIn: '30d',
+    });
+};
+
+// @desc    Register a new user
+// @route   POST /api/auth/register
+// @access  Public
+const registerUser = async (req, res) => {
+    const { name, email, password } = req.body;
+
+    try {
+        const userExists = await prisma.user.findUnique({
+            where: { email },
+        });
+
+        if (userExists) {
+            return res.status(400).json({ msg: 'User already exists' });
+        }
+
+        // Hash the password before storing it
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        const user = await prisma.user.create({
+            data: {
+                name,
+                email,
+                password: hashedPassword,
+            },
+        });
+
+        res.status(201).json({
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            token: generateToken(user.id),
+        });
+
+    } catch (error) {
+        res.status(500).json({ msg: 'Server error', error: error.message });
     }
-];
+};
 
 // @desc    Authenticate user & get token
 // @route   POST /api/auth/login
 // @access  Public
-const loginUser = (req, res) => {
-    // Get email and password from the request body
+const loginUser = async (req, res) => {
     const { email, password } = req.body;
 
-    // --- Basic Validation ---
-    if (!email || !password) {
-        return res.status(400).json({ msg: 'Please enter all fields' });
-    }
+    try {
+        const user = await prisma.user.findUnique({
+            where: { email },
+        });
 
-    // --- Find User in our "Database" ---
-    const user = users.find(u => u.email === email);
-
-    // --- Check Credentials ---
-    if (!user || user.password !== password) {
-        // We use a generic message to avoid telling an attacker whether the email exists
-        return res.status(401).json({ msg: 'Invalid credentials' });
-    }
-    
-    // --- Successful Login ---
-    console.log(`User ${email} logged in successfully.`);
-    
-    // If credentials are correct, send back a success response with user data.
-    // In a real-world app, you would generate and send a JSON Web Token (JWT) here.
-    res.status(200).json({
-        message: 'Login successful!',
-        user: {
-            email: user.email,
-            name: user.name,
-            initials: 'ZN'
+        if (user && (await bcrypt.compare(password, user.password))) {
+            res.json({
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                token: generateToken(user.id),
+            });
+        } else {
+            res.status(401).json({ msg: 'Invalid email or password' });
         }
-    });
+    } catch (error) {
+        res.status(500).json({ msg: 'Server error', error: error.message });
+    }
 };
 
 module.exports = {
+    registerUser,
     loginUser,
 };

@@ -1,20 +1,21 @@
-// --- Import Required Packages ---
+// server.js
 const express = require('express');
 const cors = require('cors');
+const dotenv = require('dotenv');
 
-// --- Create the Express App ---
+// Load environment variables from .env file
+dotenv.config();
+
 const app = express();
 const port = 3001;
 
-// --- Middleware ---
-app.use(cors()); // Enable Cross-Origin Resource Sharing
-app.use(express.json()); // Allow the server to understand JSON
+app.use(cors());
+app.use(express.json());
 
-// --- Connect Routes ---
-// Any request to '/api/auth' will be handled by our auth routes file
-app.use('/api/auth', require('./routes/auth'));
+app.use('/api/auth', require('./src/routes/auth'));
+// In the future, you could add a route for trades:
+// app.use('/api/trades', require('./routes/trades'));
 
-// --- Start the Server ---
 app.listen(port, () => {
-    console.log(`Auth service listening at http://localhost:${port}`);
+    console.log(`Auth service with Prisma listening at http://localhost:${port}`);
 });

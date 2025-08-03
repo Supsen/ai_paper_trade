@@ -13,6 +13,9 @@ app.use(cors());
 app.use(express.json());
 
 app.use('/api/auth', require('./src/routes/auth'));
+app.use('/api/screener', require('./src/routes/screener'));
+app.use('/api')
+
 // In the future, you could add a route for trades:
 // app.use('/api/trades', require('./routes/trades'));
 
